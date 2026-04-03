@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord.ui import View, Select
-import os 
+import os
 
 OWNER_ID = 1486814770815303881
 TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
@@ -11,8 +11,9 @@ bot = commands.Bot(command_prefix="$", intents=intents)
 
 # 🎀 ROZE BOJA
 PINK = discord.Color.from_rgb(255, 105, 180)
+MIDDLE_EMBED_COLOR = discord.Color.from_rgb(255, 182, 193)  # svetlija roze za vouch
 
-# DROPDOWN
+# ===== DROPDOWN SELECT ZA TICKET =====
 class TicketSelect(Select):
     def __init__(self):
         options = [
@@ -49,7 +50,6 @@ Tell us the type of Server Boost you are looking for.
 **Available:** 1 Month |  3 Month |  Key
 **Price:** $2.00 or €1.75 for 1 Month & $3.50 or €3.05 for 3 Months
 """
-
         elif choice == "Decoration":
             text = """<:deco:1489693229921337566> **Decoration Ticket**
 ───────────────────────────
@@ -59,7 +59,6 @@ Tell us the type of Decorarion you are looking for.
 **Available:** Avatars | Effects | Nameplates
 **Price:** Depends which Decoration
 """
-
         else:  # Nitro
             text = """<:pinknitro:1489693388059181228> **Nitro Ticket**
 ───────────────────────────
@@ -75,20 +74,17 @@ Tell us the type of Nitro you are looking for.
         embed.set_thumbnail(url=user.avatar.url if user.avatar else user.default_avatar.url)
 
         await channel.send(content=user.mention, embed=embed)
-
         await interaction.response.send_message(
             f"✅ Ticket created: {channel.mention}",
             ephemeral=True
         )
-
 
 class TicketView(View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
-
-# PANEL KOMANDA
+# ===== $panel KOMANDA =====
 @bot.command()
 async def panel(ctx):
     if ctx.author.id != OWNER_ID:
@@ -110,30 +106,41 @@ __Choose the reason for your ticket:__
 
 <:cross:1489694275938680994> **BUYING FROM US MEANS ACCEPTING THE TOS**
 """
-
     embed = discord.Embed(description=text, color=PINK)
     embed.set_footer(text="Select an option below")
 
     await ctx.send(embed=embed, view=TicketView())
 
-
-# CLOSE KOMANDA
+# ===== $close KOMANDA =====
 @bot.command()
 async def close(ctx):
     if ctx.author.id != OWNER_ID:
         return
-
     if ctx.channel.category and ctx.channel.category.name == TICKET_CATEGORY_NAME:
         await ctx.send("🔒 Closing ticket...")
         await ctx.channel.delete()
 
+# ===== $vouch KOMANDA =====
+@bot.command()
+async def vouch(ctx, member: discord.Member = None):
+    if not member:
+        await ctx.send("❌ Please mention a user to vouch.")
+        return
+    embed = discord.Embed(
+        title="🌟 Vouch!",
+        description=f"{ctx.author.mention} vouched for {member.mention}!",
+        color=MIDDLE_EMBED_COLOR
+    )
+    embed.set_footer(text="Thank you for vouching!")
+    await ctx.send(embed=embed)
 
+# ===== ON READY =====
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
 
+# ===== TOKEN =====
 token = os.getenv("TOKEN")
-
 if not token:
     raise ValueError("TOKEN environment variable not set")
 
