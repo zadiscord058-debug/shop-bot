@@ -2,19 +2,17 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Select
 import os
-from datetime import datetime, timedelta
 
 # ==================== CONFIG ====================
-ROLE_ID = 1486458080265896097
+ROLE_ID = 1486458080265896097  # samo oni mogu $vouches i ticket komande
 TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
 
 # 🎀 BOJE
 PINK = discord.Color.from_rgb(255, 105, 180)
 MIDDLE_EMBED_COLOR = discord.Color.from_rgb(255, 182, 193)
 
-# Vouch storage i cooldown
-vouches = {}        # {member_id: [user_ids]}
-vouch_timers = {}   # {(giver_id, receiver_id): datetime}
+# Vouch storage
+vouches = {}  # {member_id: [user_ids]}
 
 # ==================== INTENTS ====================
 intents = discord.Intents.all()
@@ -48,6 +46,7 @@ class TicketSelect(Select):
         await channel.set_permissions(guild.default_role, view_channel=False)
         await channel.set_permissions(user, view_channel=True, send_messages=True)
 
+        # EMBED TEKSTOVI
         if choice == "Server Boost":
             text = """<:rocket:1486811539221512353> **Server Boost Ticket**
 ───────────────────────────
@@ -91,7 +90,7 @@ class TicketView(View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
-# ==================== $panel ====================
+# ==================== $panel KOMANDA ====================
 @bot.command()
 async def panel(ctx):
     role = ctx.guild.get_role(ROLE_ID)
@@ -117,9 +116,10 @@ __Choose the reason for your ticket:__
 """
     embed = discord.Embed(description=text, color=PINK)
     embed.set_footer(text="Select an option below")
+    embed.set_thumbnail(url=bot.user.avatar.url)  # slika bota gore u uglu
     await ctx.send(embed=embed, view=TicketView())
 
-# ==================== $close ====================
+# ==================== $close KOMANDA ====================
 @bot.command()
 async def close(ctx):
     role = ctx.guild.get_role(ROLE_ID)
@@ -133,36 +133,28 @@ async def close(ctx):
     else:
         await ctx.send("❌ Ovu komandu možete koristiti samo u ticket kanalu")
 
-# ==================== $vouch ====================
+# ==================== $vouch KOMANDA ====================
 @bot.command()
 async def vouch(ctx, member: discord.Member = None):
     if not member:
         await ctx.send("❌ Please mention a user to vouch")
         return
 
-    key = (ctx.author.id, member.id)
-    now = datetime.utcnow()
-
-    # 1h cooldown po paru giver → receiver
-    if key in vouch_timers and now < vouch_timers[key]:
-        await ctx.send("❌ Možeš da vouchuješ istog korisnika samo jednom na sat vremena")
-        return
-
-    # Dodavanje vouch-a
     if member.id not in vouches:
         vouches[member.id] = []
+
     vouches[member.id].append(ctx.author.id)
-    vouch_timers[key] = now + timedelta(hours=1)
 
     embed = discord.Embed(
-        title="🌟 Vouch!",
-        description=f"{ctx.author.mention} vouched for {member.mention}!",
-        color=MIDDLE_EMBED_COLOR
+        title="🌟 New Vouch!",
+        description=f"{ctx.author.mention} vouched for {member.mention}",
+        color=PINK
     )
-    embed.set_footer(text="Thank you for vouching!")
+    embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
+    embed.set_footer(text=f"Total vouches: {len(vouches[member.id])}")
     await ctx.send(embed=embed)
 
-# ==================== $vouches ====================
+# ==================== $vouches KOMANDA ====================
 @bot.command()
 async def vouches(ctx, member: discord.Member = None):
     role = ctx.guild.get_role(ROLE_ID)
@@ -178,16 +170,17 @@ async def vouches(ctx, member: discord.Member = None):
     count = len(user_vouches)
 
     if count == 0:
-        text = f"{member.mention} has no vouches yet"
+        description = f"{member.mention} has no vouches yet"
     else:
         names = [ctx.guild.get_member(uid).mention if ctx.guild.get_member(uid) else f"Unknown({uid})" for uid in user_vouches]
-        text = f"{member.mention} has {count} vouches:\n" + ", ".join(names)
+        description = f"{member.mention} has {count} vouches:\n" + ", ".join(names)
 
     embed = discord.Embed(
         title=f"📜 {member.name}'s Vouches",
-        description=text,
-        color=MIDDLE_EMBED_COLOR
+        description=description,
+        color=PINK
     )
+    embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
     await ctx.send(embed=embed)
 
 # ==================== ON READY ====================
