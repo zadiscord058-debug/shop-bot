@@ -2,9 +2,8 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Select
 
-TOKEN = "UBACI_TOKEN"
-OWNER_ID = 123456789012345678
-TICKET_CATEGORY_NAME = "tickets"
+OWNER_ID = 1486814770815303881
+TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="$", intents=intents)
@@ -132,5 +131,9 @@ async def close(ctx):
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
 
+token = os.getenv("TOKEN")
 
-bot.run(TOKEN)
+if not token:
+    raise ValueError("TOKEN environment variable not set")
+
+bot.run(token)
