@@ -4,14 +4,11 @@ from discord.ui import View, Select
 import os
 
 # ==================== CONFIG ====================
-ROLE_ID = 1486458080265896097  # samo oni mogu $vouches i ticket komande
+ROLE_ID = 1486458080265896097  # samo oni mogu $panel i $close
 TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
 
 # 🎀 BOJE
 PINK = discord.Color.from_rgb(255, 105, 180)
-MIDDLE_EMBED_COLOR = discord.Color.from_rgb(255, 182, 193)
-
-
 
 # ==================== INTENTS ====================
 intents = discord.Intents.all()
@@ -25,6 +22,9 @@ class TicketSelect(Select):
             discord.SelectOption(label="Nitro"),
             discord.SelectOption(label="Server Boost"),
             discord.SelectOption(label="Decoration"),
+            discord.SelectOption(label="Members"),
+            discord.SelectOption(label="Socials"),
+            discord.SelectOption(label="Others"),
         ]
         super().__init__(placeholder="Choose Purchase", options=options)
 
@@ -64,6 +64,24 @@ Tell us the type of Decoration you are looking for.
 **Available:** Avatars | Effects | Nameplates
 **Price:** Depends which Decoration
 """
+        elif choice == "Members":
+            text = """**Members Ticket**
+───────────────────────────
+**Thank you for contacting support**
+Tell us what member related help you need.
+"""
+        elif choice == "Socials":
+            text = """**Socials Ticket**
+───────────────────────────
+**Thank you for contacting support**
+Tell us what social help you need.
+"""
+        elif choice == "Others":
+            text = """**Others Ticket**
+───────────────────────────
+**Thank you for contacting support**
+Tell us what other help you need.
+"""
         else:  # Nitro
             text = """<:pinknitro:1489693388059181228> **Nitro Ticket**
 ───────────────────────────
@@ -97,7 +115,7 @@ async def panel(ctx):
         await ctx.send("❌ Nemate dozvolu da koristite ovu komandu")
         return
 
-    text = """## <:pinknitro:1489693388059181228> __N1troHub TICKETS__
+    text = """## <:pinknitro:1489693388059181228> __NovexHub TICKETS__
 **Do you want to open a ticket to contact us?** 
 __Choose the reason for your ticket:__
 
@@ -115,7 +133,7 @@ __Choose the reason for your ticket:__
 """
     embed = discord.Embed(description=text, color=PINK)
     embed.set_footer(text="Select an option below")
-    embed.set_thumbnail(url=bot.user.avatar.url)  # slika bota gore u uglu
+    embed.set_thumbnail(url=bot.user.avatar.url)  # slika bota gore
     await ctx.send(embed=embed, view=TicketView())
 
 # ==================== $close KOMANDA ====================
@@ -131,7 +149,6 @@ async def close(ctx):
         await ctx.channel.delete()
     else:
         await ctx.send("❌ Ovu komandu možete koristiti samo u ticket kanalu")
-
 
 # ==================== ON READY ====================
 @bot.event
