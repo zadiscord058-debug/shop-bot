@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord.ui import View, Select
+import os 
 
 OWNER_ID = 1486814770815303881
 TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
