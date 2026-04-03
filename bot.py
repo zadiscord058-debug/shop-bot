@@ -2,21 +2,23 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Select
 import os
+from datetime import datetime, timedelta
 
 # ==================== CONFIG ====================
 ROLE_ID = 1486458080265896097
 TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
 
-# 🎀 ROZE BOJA
+# 🎀 BOJE
 PINK = discord.Color.from_rgb(255, 105, 180)
-MIDDLE_EMBED_COLOR = discord.Color.from_rgb(255, 182, 193)  # svetlija roze za vouch
+MIDDLE_EMBED_COLOR = discord.Color.from_rgb(255, 182, 193)
 
-# Vouch storage
-vouches = {}  # {member_id: [user_ids]}
+# Vouch storage i cooldown
+vouches = {}        # {member_id: [user_ids]}
+vouch_timers = {}   # {(giver_id, receiver_id): datetime}
 
 # ==================== INTENTS ====================
 intents = discord.Intents.all()
-intents.message_content = True  # obavezno za $komande
+intents.message_content = True
 bot = commands.Bot(command_prefix="$", intents=intents)
 
 # ==================== TICKET DROPDOWN ====================
@@ -46,7 +48,6 @@ class TicketSelect(Select):
         await channel.set_permissions(guild.default_role, view_channel=False)
         await channel.set_permissions(user, view_channel=True, send_messages=True)
 
-        # EMBED TEKSTOVI
         if choice == "Server Boost":
             text = """<:rocket:1486811539221512353> **Server Boost Ticket**
 ───────────────────────────
@@ -90,7 +91,7 @@ class TicketView(View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
-# ==================== $panel KOMANDA ====================
+# ==================== $panel ====================
 @bot.command()
 async def panel(ctx):
     role = ctx.guild.get_role(ROLE_ID)
@@ -118,7 +119,7 @@ __Choose the reason for your ticket:__
     embed.set_footer(text="Select an option below")
     await ctx.send(embed=embed, view=TicketView())
 
-# ==================== $close KOMANDA ====================
+# ==================== $close ====================
 @bot.command()
 async def close(ctx):
     role = ctx.guild.get_role(ROLE_ID)
@@ -132,15 +133,26 @@ async def close(ctx):
     else:
         await ctx.send("❌ Ovu komandu možete koristiti samo u ticket kanalu")
 
-# ==================== $vouch KOMANDA ====================
+# ==================== $vouch ====================
 @bot.command()
 async def vouch(ctx, member: discord.Member = None):
     if not member:
         await ctx.send("❌ Please mention a user to vouch")
         return
+
+    key = (ctx.author.id, member.id)
+    now = datetime.utcnow()
+
+    # 1h cooldown po paru giver → receiver
+    if key in vouch_timers and now < vouch_timers[key]:
+        await ctx.send("❌ Možeš da vouchuješ istog korisnika samo jednom na sat vremena")
+        return
+
+    # Dodavanje vouch-a
     if member.id not in vouches:
         vouches[member.id] = []
     vouches[member.id].append(ctx.author.id)
+    vouch_timers[key] = now + timedelta(hours=1)
 
     embed = discord.Embed(
         title="🌟 Vouch!",
@@ -150,12 +162,18 @@ async def vouch(ctx, member: discord.Member = None):
     embed.set_footer(text="Thank you for vouching!")
     await ctx.send(embed=embed)
 
-# ==================== $vouches KOMANDA ====================
+# ==================== $vouches ====================
 @bot.command()
 async def vouches(ctx, member: discord.Member = None):
+    role = ctx.guild.get_role(ROLE_ID)
+    if role not in ctx.author.roles:
+        await ctx.send("❌ Nemate dozvolu da koristite ovu komandu")
+        return
+
     if not member:
         await ctx.send("❌ Please mention a user to see their vouches")
         return
+
     user_vouches = vouches.get(member.id, [])
     count = len(user_vouches)
 
