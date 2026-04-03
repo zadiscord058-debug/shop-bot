@@ -4,7 +4,7 @@ from discord.ui import View, Select
 import os
 
 # ==================== CONFIG ====================
-OWNER_ID = 1486814770815303881
+OWNER_ROLE_ID = 1486814770815303881
 TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
 
 # 🎀 ROZE BOJA
