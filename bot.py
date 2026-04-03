@@ -93,7 +93,7 @@ class TicketView(View):
 # ==================== $panel KOMANDA ====================
 @bot.command()
 async def panel(ctx):
-    if ctx.author.id != OWNER_ID:
+    if ctx.author.id != OWNER_ROLE_ID:
         await ctx.send("❌ You are not allowed to use this command.")
         return
 
@@ -121,7 +121,7 @@ __Choose the reason for your ticket:__
 # ==================== $close KOMANDA ====================
 @bot.command()
 async def close(ctx):
-    if ctx.author.id != OWNER_ID:
+    if ctx.author.id != OWNER_ROLE_ID:
         await ctx.send("❌ You cannot use this command.")
         return
     if ctx.channel.category and ctx.channel.category.name == TICKET_CATEGORY_NAME:
