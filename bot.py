@@ -3,17 +3,23 @@ from discord.ext import commands
 from discord.ui import View, Select
 import os
 
+# ==================== CONFIG ====================
 OWNER_ID = 1486814770815303881
 TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
-
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="$", intents=intents)
 
 # 🎀 ROZE BOJA
 PINK = discord.Color.from_rgb(255, 105, 180)
 MIDDLE_EMBED_COLOR = discord.Color.from_rgb(255, 182, 193)  # svetlija roze za vouch
 
-# ===== DROPDOWN SELECT ZA TICKET =====
+# Vouch storage
+vouches = {}  # {member_id: [user_ids]}
+
+# ==================== INTENTS ====================
+intents = discord.Intents.all()
+intents.message_content = True  # obavezno za $commands
+bot = commands.Bot(command_prefix="$", intents=intents)
+
+# ==================== TICKET DROPDOWN ====================
 class TicketSelect(Select):
     def __init__(self):
         options = [
@@ -84,10 +90,11 @@ class TicketView(View):
         super().__init__(timeout=None)
         self.add_item(TicketSelect())
 
-# ===== $panel KOMANDA =====
+# ==================== $panel KOMANDA ====================
 @bot.command()
 async def panel(ctx):
     if ctx.author.id != OWNER_ID:
+        await ctx.send("❌ You are not allowed to use this command.")
         return
 
     text = """## <:pinknitro:1489693388059181228> __N1troHub TICKETS__
@@ -111,21 +118,28 @@ __Choose the reason for your ticket:__
 
     await ctx.send(embed=embed, view=TicketView())
 
-# ===== $close KOMANDA =====
+# ==================== $close KOMANDA ====================
 @bot.command()
 async def close(ctx):
     if ctx.author.id != OWNER_ID:
+        await ctx.send("❌ You cannot use this command.")
         return
     if ctx.channel.category and ctx.channel.category.name == TICKET_CATEGORY_NAME:
         await ctx.send("🔒 Closing ticket...")
         await ctx.channel.delete()
+    else:
+        await ctx.send("❌ This command can only be used in a ticket channel.")
 
-# ===== $vouch KOMANDA =====
+# ==================== $vouch KOMANDA ====================
 @bot.command()
 async def vouch(ctx, member: discord.Member = None):
     if not member:
         await ctx.send("❌ Please mention a user to vouch.")
         return
+    if member.id not in vouches:
+        vouches[member.id] = []
+    vouches[member.id].append(ctx.author.id)
+
     embed = discord.Embed(
         title="🌟 Vouch!",
         description=f"{ctx.author.mention} vouched for {member.mention}!",
@@ -134,14 +148,34 @@ async def vouch(ctx, member: discord.Member = None):
     embed.set_footer(text="Thank you for vouching!")
     await ctx.send(embed=embed)
 
-# ===== ON READY =====
+# ==================== $vouches KOMANDA ====================
+@bot.command()
+async def vouches(ctx, member: discord.Member = None):
+    if not member:
+        await ctx.send("❌ Please mention a user to see their vouches.")
+        return
+    user_vouches = vouches.get(member.id, [])
+    count = len(user_vouches)
+
+    if count == 0:
+        text = f"{member.mention} has no vouches yet."
+    else:
+        names = [ctx.guild.get_member(uid).mention if ctx.guild.get_member(uid) else f"Unknown({uid})" for uid in user_vouches]
+        text = f"{member.mention} has {count} vouches:\n" + ", ".join(names)
+
+    embed = discord.Embed(
+        title=f"📜 {member.name}'s Vouches",
+        description=text,
+        color=MIDDLE_EMBED_COLOR
+    )
+    await ctx.send(embed=embed)
+
+# ==================== ON READY ====================
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
 
-# ===== TOKEN =====
-token = os.getenv("TOKEN")
-if not token:
-    raise ValueError("TOKEN environment variable not set")
+# ==================== TOKEN ====================
 
-bot.run(token)
+TOKEN = os.getenv("TOKEN")
+bot.run(TOKEN)
