@@ -11,8 +11,7 @@ TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
 PINK = discord.Color.from_rgb(255, 105, 180)
 MIDDLE_EMBED_COLOR = discord.Color.from_rgb(255, 182, 193)
 
-# Vouch storage
-vouches = {}  # {member_id: [user_ids]}
+
 
 # ==================== INTENTS ====================
 intents = discord.Intents.all()
@@ -133,55 +132,6 @@ async def close(ctx):
     else:
         await ctx.send("❌ Ovu komandu možete koristiti samo u ticket kanalu")
 
-# ==================== $vouch KOMANDA ====================
-@bot.command()
-async def vouch(ctx, member: discord.Member = None):
-    if not member:
-        await ctx.send("❌ Please mention a user to vouch")
-        return
-
-    if member.id not in vouches:
-        vouches[member.id] = []
-
-    vouches[member.id].append(ctx.author.id)
-
-    embed = discord.Embed(
-        title="🌟 New Vouch!",
-        description=f"{ctx.author.mention} vouched for {member.mention}",
-        color=PINK
-    )
-    embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
-    embed.set_footer(text=f"Total vouches: {len(vouches[member.id])}")
-    await ctx.send(embed=embed)
-
-# ==================== $vouches KOMANDA ====================
-@bot.command()
-async def vouches(ctx, member: discord.Member = None):
-    role = ctx.guild.get_role(ROLE_ID)
-    if role not in ctx.author.roles:
-        await ctx.send("❌ Nemate dozvolu da koristite ovu komandu")
-        return
-
-    if not member:
-        await ctx.send("❌ Please mention a user to see their vouches")
-        return
-
-    user_vouches = vouches.get(member.id, [])
-    count = len(user_vouches)
-
-    if count == 0:
-        description = f"{member.mention} has no vouches yet"
-    else:
-        names = [ctx.guild.get_member(uid).mention if ctx.guild.get_member(uid) else f"Unknown({uid})" for uid in user_vouches]
-        description = f"{member.mention} has {count} vouches:\n" + ", ".join(names)
-
-    embed = discord.Embed(
-        title=f"📜 {member.name}'s Vouches",
-        description=description,
-        color=PINK
-    )
-    embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
-    await ctx.send(embed=embed)
 
 # ==================== ON READY ====================
 @bot.event
