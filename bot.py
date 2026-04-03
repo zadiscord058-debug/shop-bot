@@ -4,7 +4,7 @@ from discord.ui import View, Select
 import os
 
 # ==================== CONFIG ====================
-ROLE_ID = 123456789012345678  # ovde ubaci ID role koja sme da koristi $panel i $close
+ROLE_ID = 1486458080265896097
 TICKET_CATEGORY_NAME = "══「 🎫 TICKETS 」══"
 
 # 🎀 ROZE BOJA
