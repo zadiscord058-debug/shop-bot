@@ -2404,4 +2404,4 @@ token = os.getenv("TOKEN")
 if not token:
     raise ValueError("TOKEN environment variable not set")
 
-bot.run(token)
+bot.run(TOKEN)
