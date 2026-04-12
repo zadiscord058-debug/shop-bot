@@ -220,6 +220,21 @@ class TicketButtons(discord.ui.View):
         ))
 
         await interaction.channel.delete()
+@discord.ui.button(label="➕ add", style=discord.ButtonStyle.primary)
+async def add(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+    if not is_mm(interaction.user):
+        return await interaction.response.send_message("MM only", ephemeral=True)
+
+    await interaction.response.send_message("Use $add @user", ephemeral=True)
+    
+@discord.ui.button(label="➖ remove", style=discord.ButtonStyle.secondary)
+async def remove(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+    if not is_mm(interaction.user):
+        return await interaction.response.send_message("MM only", ephemeral=True)
+
+    await interaction.response.send_message("Use $remove @user", ephemeral=True)
 
 # ======================
 # PANEL
@@ -310,6 +325,36 @@ async def close(ctx):
 
     await ctx.channel.delete()
 
+@bot.command()
+async def add(ctx, member: discord.Member):
+
+    if not is_mm(ctx.author):
+        return await ctx.send("MM only")
+
+    await ctx.channel.set_permissions(member, view_channel=True, send_messages=True)
+
+    await ctx.send(embed=action_embed(
+        "User Added",
+        ctx.author,
+        f"{member.mention} has been added to this ticket.",
+        "User now has access to the ticket."
+    ))
+    
+@bot.command()
+async def remove(ctx, member: discord.Member):
+
+    if not is_mm(ctx.author):
+        return await ctx.send("MM only")
+
+    await ctx.channel.set_permissions(member, overwrite=None)
+
+    await ctx.send(embed=action_embed(
+        "User Removed",
+        ctx.author,
+        f"{member.mention} has been removed from this ticket.",
+        "User no longer has access."
+    ))
+    
 # ======================
 # RUN
 # ======================
