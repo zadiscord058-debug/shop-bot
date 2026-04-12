@@ -27,7 +27,7 @@ def is_founder():
     return commands.check(predicate)
 
 # ======================
-# 🔍 HELPER
+# 🔍 HELPERS
 # ======================
 def extract_member_from_input(guild, input_value):
     if input_value.startswith("<@") and input_value.endswith(">"):
@@ -88,7 +88,6 @@ class MMModal(discord.ui.Modal):
 
         self.agreement = discord.ui.TextInput(
             label="Do both users agree?",
-            placeholder="Type YES if both agreed",
             required=True
         )
 
@@ -167,6 +166,11 @@ class MMModal(discord.ui.Modal):
                 "## Status\n"
                 "**Waiting for a Middleman to claim this ticket.**\n\n"
 
+                "## Actions\n"
+                "• Claim ticket with CLAIM button\n"
+                "• Add/remove users if needed\n"
+                "• Close when finished\n\n"
+
                 "## Rules\n"
                 "• Do not scam\n"
                 "• Follow middleman instructions\n"
@@ -186,13 +190,93 @@ class MMModal(discord.ui.Modal):
 
         await channel.send(
             content=" ".join(mention_parts),
-            embed=embed
+            embed=embed,
+            view=TicketButtons()
         )
 
         await interaction.response.send_message(
             f"✅ Ticket created: {channel.mention}",
             ephemeral=True
         )
+
+# ======================
+# 🎫 TICKET BUTTONS
+# ======================
+class TicketButtons(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="CLAIM", style=discord.ButtonStyle.success)
+    async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        ticket_data[interaction.channel.id]["claimer_id"] = interaction.user.id
+
+        await interaction.channel.send(
+            f"🎫 Claimed by {interaction.user.mention}"
+        )
+
+        await interaction.response.send_message("Claimed.", ephemeral=True)
+
+    @discord.ui.button(label="UNCLAIM", style=discord.ButtonStyle.secondary)
+    async def unclaim(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        ticket_data[interaction.channel.id]["claimer_id"] = None
+
+        await interaction.channel.send("🔄 Ticket unclaimed.")
+        await interaction.response.send_message("Unclaimed.", ephemeral=True)
+
+    @discord.ui.button(label="ADD USER", style=discord.ButtonStyle.primary)
+    async def add(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        await interaction.response.send_message(
+            "Use: $add @user in ticket",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="REMOVE USER", style=discord.ButtonStyle.danger)
+    async def remove(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        await interaction.response.send_message(
+            "Use: $remove @user in ticket",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="CLOSE", style=discord.ButtonStyle.red)
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        await interaction.channel.delete()
+
+# ======================
+# 🧠 COMMANDS
+# ======================
+@bot.command()
+async def add(ctx, member: discord.Member):
+
+    await ctx.channel.set_permissions(member, view_channel=True, send_messages=True)
+    await ctx.send(f"✅ Added {member.mention}")
+
+@bot.command()
+async def remove(ctx, member: discord.Member):
+
+    await ctx.channel.set_permissions(member, overwrite=None)
+    await ctx.send(f"❌ Removed {member.mention}")
+
+@bot.command()
+async def claim(ctx):
+
+    ticket_data[ctx.channel.id]["claimer_id"] = ctx.author.id
+    await ctx.send(f"🎫 Claimed by {ctx.author.mention}")
+
+@bot.command()
+async def unclaim(ctx):
+
+    ticket_data[ctx.channel.id]["claimer_id"] = None
+    await ctx.send("🔄 Unclaimed")
+
+@bot.command()
+async def close(ctx):
+
+    await ctx.channel.delete()
 
 # ======================
 # 📌 PANEL (FOUNDER ONLY)
@@ -218,12 +302,12 @@ async def panel(ctx):
             "*Note: Large trades may include a small service fee.*\n\n"
 
             "📌 **Usage Conditions**\n"
-            "• Find someone to trade with.\n"
-            "• Agree on the trade terms.\n"
-            "• Click the dropdown below.\n"
-            "• Wait for a staff member.\n\n"
+            "• Find someone to trade with\n"
+            "• Agree on trade terms\n"
+            "• Select trade type\n"
+            "• Wait for staff\n\n"
 
-            "**Eneba • Trusted Middleman Service**"
+            "**Eneba • Trusted Middleman System**"
         ),
         color=PURPLE
     )
@@ -233,6 +317,6 @@ async def panel(ctx):
     await ctx.send(embed=embed, view=MMView())
 
 # ======================
-# 🚀 RUN (RAILWAY)
+# 🚀 RUN
 # ======================
 bot.run(os.getenv("TOKEN"))
