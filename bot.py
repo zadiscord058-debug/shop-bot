@@ -26,10 +26,8 @@ bot = commands.Bot(command_prefix="$", intents=intents)
 def has_role(user, role_id):
     return any(role.id == role_id for role in user.roles)
 
-
 def is_mm(user):
     return has_role(user, MM_ROLE_ID)
-
 
 def extract_member_from_input(guild, input_value):
     if input_value.startswith("<@") and input_value.endswith(">"):
@@ -37,33 +35,31 @@ def extract_member_from_input(guild, input_value):
         return guild.get_member(int(input_value))
     return discord.utils.find(lambda m: m.name == input_value, guild.members)
 
-
 def ticket_ping(guild, creator, other_member=None):
     mm_role = guild.get_role(MM_ROLE_ID)
     parts = []
 
-    # creator uvijek ping
     if creator:
         parts.append(creator.mention)
 
-    # drugi user
     if other_member:
         parts.append(other_member.mention)
 
-    # MM role
     if mm_role:
         parts.append(mm_role.mention)
 
     return " ".join(parts)
 
-
-def action_embed(title, user, text):
+# ✅ NOVI EMBED TEMPLATE (KAO NA SLICI)
+def action_embed(title, user, main_text, status_text):
     return discord.Embed(
         title=f"💜 {SERVER_NAME} | {title}",
         description=(
             f"# {title}\n\n"
-            f"{text}\n\n"
-            f"**Action by:** {user.mention}"
+            f"{main_text}\n\n"
+            f"## Status\n"
+            f"{status_text}\n\n"
+            f"{SERVER_NAME} | Ticket System"
         ),
         color=PURPLE
     )
@@ -143,21 +139,23 @@ class MMModal(discord.ui.Modal):
         }
 
         embed = discord.Embed(
-            title=f"💜 {SERVER_NAME} | NEW TICKET",
+            title=f"💜 {SERVER_NAME} | New Middleman Ticket",
             description=(
-                "# New Middleman Ticket Created\n\n"
+                "# New Ticket Created\n\n"
                 f"**Trade Type:** {self.trade_type}\n"
                 f"**Creator:** {interaction.user.mention}\n"
                 f"**Other User:** {other_member.mention if other_member else self.other_user.value}\n\n"
                 f"**Details:** {self.trade_details.value}\n\n"
                 f"**Agreement:** {self.agreement.value}\n\n"
-                "Status: Waiting for MM"
+                "## Status\n"
+                "Waiting for a middleman to claim this ticket.\n\n"
+                f"{SERVER_NAME} | Ticket System"
             ),
             color=PURPLE
         )
 
         await channel.send(
-            content=ticket_ping(guild, other_member),
+            content=ticket_ping(guild, interaction.user, other_member),
             embed=embed,
             view=TicketButtons()
         )
@@ -174,7 +172,6 @@ class TicketButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    # CLAIM
     @discord.ui.button(label="✔ claim", style=discord.ButtonStyle.success)
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
 
@@ -186,12 +183,12 @@ class TicketButtons(discord.ui.View):
         await interaction.channel.send(embed=action_embed(
             "Ticket Claimed",
             interaction.user,
-            "This ticket is now handled by a Middleman."
+            f"{interaction.user.mention} has claimed this ticket.",
+            "This middleman is now handling the trade."
         ))
 
         await interaction.response.send_message("Claimed", ephemeral=True)
 
-    # UNCLAIM
     @discord.ui.button(label="🔓 unclaim", style=discord.ButtonStyle.secondary)
     async def unclaim(self, interaction: discord.Interaction, button: discord.ui.Button):
 
@@ -203,30 +200,12 @@ class TicketButtons(discord.ui.View):
         await interaction.channel.send(embed=action_embed(
             "Ticket Unclaimed",
             interaction.user,
-            "Ticket is available again."
+            f"{interaction.user.mention} has unclaimed this ticket.",
+            "Another MM can now claim it."
         ))
 
         await interaction.response.send_message("Unclaimed", ephemeral=True)
 
-    # ADD
-    @discord.ui.button(label="➕ add", style=discord.ButtonStyle.primary)
-    async def add(self, interaction: discord.Interaction, button: discord.ui.Button):
-
-        if not is_mm(interaction.user):
-            return await interaction.response.send_message("MM only", ephemeral=True)
-
-        await interaction.response.send_message("$add @user", ephemeral=True)
-
-    # REMOVE
-    @discord.ui.button(label="➖ remove", style=discord.ButtonStyle.gray)
-    async def remove(self, interaction: discord.Interaction, button: discord.ui.Button):
-
-        if not is_mm(interaction.user):
-            return await interaction.response.send_message("MM only", ephemeral=True)
-
-        await interaction.response.send_message("$remove @user", ephemeral=True)
-
-    # CLOSE
     @discord.ui.button(label="❌ close", style=discord.ButtonStyle.danger)
     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
 
@@ -236,7 +215,8 @@ class TicketButtons(discord.ui.View):
         await interaction.channel.send(embed=action_embed(
             "Ticket Closed",
             interaction.user,
-            "This ticket is now closed and will be deleted."
+            f"{interaction.user.mention} has closed this ticket.",
+            "This ticket will now be deleted."
         ))
 
         await interaction.channel.delete()
@@ -287,78 +267,48 @@ async def panel(ctx):
 # ======================
 # COMMANDS
 # ======================
-@bot.command()
-async def add(ctx, member: discord.Member):
 
-    if not is_mm(ctx.author):
-        return await ctx.send("MM only")
-
-    await ctx.channel.set_permissions(member, view_channel=True, send_messages=True)
-
-    await ctx.send(embed=action_embed(
-        "User Added",
-        ctx.author,
-        f"{member.mention} added to ticket."
-    ))
-
-@bot.command()
-async def remove(ctx, member: discord.Member):
-
-    if not is_mm(ctx.author):
-        return await ctx.send("MM only")
-
-    await ctx.channel.set_permissions(member, overwrite=None)
-
-    await ctx.send(embed=action_embed(
-        "User Removed",
-        ctx.author,
-        f"{member.mention} removed from ticket."
-    ))
-    
 @bot.command()
 async def claim(ctx):
-
-    if not has_role(ctx.author, MM_ROLE_ID):
-        return await ctx.send("Only MM can use this.")
+    if not is_mm(ctx.author):
+        return await ctx.send("MM only")
 
     ticket_data[ctx.channel.id]["claimer"] = ctx.author.id
 
-    embed = discord.Embed(
-        title=f"💜 {SERVER_NAME} | TICKET CLAIMED",
-        description=(
-            "# Ticket Claimed\n\n"
-            f"This ticket has been claimed by {ctx.author.mention}\n\n"
-            "## Status\n"
-            "Only this middleman is handling the trade."
-        ),
-        color=PURPLE
-    )
-
-    await ctx.send(embed=embed)
-
+    await ctx.send(embed=action_embed(
+        "Ticket Claimed",
+        ctx.author,
+        f"{ctx.author.mention} has claimed this ticket.",
+        "This middleman is now handling the trade."
+    ))
 
 @bot.command()
 async def unclaim(ctx):
-
-    if not has_role(ctx.author, MM_ROLE_ID):
-        return await ctx.send("Only MM can use this.")
+    if not is_mm(ctx.author):
+        return await ctx.send("MM only")
 
     ticket_data[ctx.channel.id]["claimer"] = None
 
-    embed = discord.Embed(
-        title=f"💜 {SERVER_NAME} | TICKET UNCLAIMED",
-        description=(
-            "# Ticket Unclaimed\n\n"
-            f"{ctx.author.mention} has unclaimed this ticket.\n\n"
-            "## Status\n"
-            "Now available for other middlemen."
-        ),
-        color=PURPLE
-    )
+    await ctx.send(embed=action_embed(
+        "Ticket Unclaimed",
+        ctx.author,
+        f"{ctx.author.mention} has unclaimed this ticket.",
+        "Another MM can now claim it."
+    ))
 
-    await ctx.send(embed=embed)
-    
+@bot.command()
+async def close(ctx):
+    if not is_mm(ctx.author):
+        return await ctx.send("MM only")
 
+    await ctx.send(embed=action_embed(
+        "Ticket Closed",
+        ctx.author,
+        f"{ctx.author.mention} has closed this ticket.",
+        "This ticket will now be deleted."
+    ))
+
+    await ctx.channel.delete()
 
 # ======================
 # RUN
