@@ -3,16 +3,20 @@ import discord
 from discord.ext import commands
 
 # ======================
-# CONFIG
+# 🔧 CONFIG (ROLE IDS)
 # ======================
 TICKET_CATEGORY_ID = 1492849115120537750
 MM_ROLE_ID = 1492849227414638642
+FOUNDER_ROLE_ID = 1492849203599118437
+OWNER_ROLE_ID = 1492849203599118437
 
+SERVER_NAME = "Eneba"
 PURPLE = 0x9b59b6
+
 ticket_data = {}
 
 # ======================
-# BOT
+# BOT SETUP
 # ======================
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="$", intents=intents)
@@ -26,25 +30,11 @@ def extract_member_from_input(guild, input_value):
         return guild.get_member(int(input_value))
     return discord.utils.find(lambda m: m.name == input_value, guild.members)
 
-# ======================
-# EMBED BUILDER
-# ======================
-def make_ticket_embed(data):
-    return discord.Embed(
-        title="💜 Middleman Ticket Panel",
-        description=(
-            f"**Trade Type:** {data.get('trade_type')}\n"
-            f"**Creator:** <@{data.get('creator_id')}>\n"
-            f"**Other User:** {data.get('other_user_mention')}\n\n"
-            f"**Details:**\n{data.get('trade_details')}\n\n"
-            f"**Status:** {data.get('status')}\n"
-            f"**Claimed by:** {f'<@{data['claimer_id']}>' if data.get('claimer_id') else 'None'}"
-        ),
-        color=PURPLE
-    )
+def has_role(user, role_id):
+    return any(role.id == role_id for role in user.roles)
 
 # ======================
-# SELECT
+# SELECT MENU
 # ======================
 class MMSelect(discord.ui.Select):
     def __init__(self):
@@ -56,6 +46,8 @@ class MMSelect(discord.ui.Select):
 
         super().__init__(
             placeholder="Select trade type below",
+            min_values=1,
+            max_values=1,
             options=options
         )
 
@@ -71,7 +63,6 @@ class MMView(discord.ui.View):
 # MODAL
 # ======================
 class MMModal(discord.ui.Modal):
-
     def __init__(self, trade_type):
         super().__init__(title="Middleman Ticket")
 
@@ -79,15 +70,15 @@ class MMModal(discord.ui.Modal):
 
         self.other_user = discord.ui.TextInput(label="Other User", required=True)
         self.trade_details = discord.ui.TextInput(label="Trade Details", style=discord.TextStyle.paragraph, required=True)
-        self.agreement = discord.ui.TextInput(label="Agreement (YES)", required=True)
+        self.agreement = discord.ui.TextInput(label="Agreement (YES/NO)", required=True)
 
         self.add_item(self.other_user)
         self.add_item(self.trade_details)
         self.add_item(self.agreement)
 
     async def on_submit(self, interaction: discord.Interaction):
-
         guild = interaction.guild
+
         category = guild.get_channel(TICKET_CATEGORY_ID)
         mm_role = guild.get_role(MM_ROLE_ID)
 
@@ -95,7 +86,7 @@ class MMModal(discord.ui.Modal):
 
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True)
         }
 
         if other_member:
@@ -112,23 +103,32 @@ class MMModal(discord.ui.Modal):
 
         ticket_data[channel.id] = {
             "creator_id": interaction.user.id,
-            "other_user_mention": other_member.mention if other_member else self.other_user.value,
-            "claimer_id": None,
-            "trade_type": self.trade_type,
-            "trade_details": self.trade_details.value,
-            "status": "🟡 Waiting for claim",
+            "other_id": other_member.id if other_member else None,
+            "claimer": None
         }
 
-        msg = await channel.send(
-            content=interaction.user.mention,
-            embed=make_ticket_embed(ticket_data[channel.id]),
-            view=TicketButtons()
+        embed = discord.Embed(
+            title=f"💜 {SERVER_NAME} | NEW TICKET",
+            description=
+            "# New Middleman Ticket Created\n\n"
+            "A new secure trade request has been submitted.\n\n"
+            "## Ticket Information\n"
+            f"**Trade Type:** {self.trade_type}\n"
+            f"**Creator:** {interaction.user.mention}\n"
+            f"**Other User:** {other_member.mention if other_member else self.other_user.value}\n\n"
+            "## Trade Details\n"
+            f"{self.trade_details.value}\n\n"
+            "## Agreement\n"
+            f"{self.agreement.value}\n\n"
+            "## Status\n"
+            "Waiting for a middleman to claim this ticket.",
+            color=PURPLE
         )
 
-        ticket_data[channel.id]["message_id"] = msg.id
+        await channel.send(embed=embed, view=TicketButtons())
 
         await interaction.response.send_message(
-            f"Ticket created: {channel.mention}",
+            f"✅ Ticket created: {channel.mention}",
             ephemeral=True
         )
 
@@ -139,76 +139,72 @@ class TicketButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    async def update(self, channel):
-        data = ticket_data[channel.id]
-        msg = await channel.fetch_message(data["message_id"])
-        await msg.edit(embed=make_ticket_embed(data))
+    # CLAIM
+    @discord.ui.button(label="✔ claim", style=discord.ButtonStyle.success)
+    async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
 
-    @discord.ui.button(label="claim", style=discord.ButtonStyle.success, emoji="🎫")
-    async def claim(self, interaction, button):
+        if not has_role(interaction.user, MM_ROLE_ID):
+            return await interaction.response.send_message("Only MM can claim tickets.", ephemeral=True)
 
-        if MM_ROLE_ID not in [r.id for r in interaction.user.roles]:
-            return await interaction.response.send_message("no permission", ephemeral=True)
+        ticket_data[interaction.channel.id]["claimer"] = interaction.user.id
 
-        data = ticket_data[interaction.channel.id]
-        data["claimer_id"] = interaction.user.id
-        data["status"] = "🟢 Claimed"
+        embed = discord.Embed(
+            title=f"💜 {SERVER_NAME} | TICKET CLAIMED",
+            description=
+            "# Ticket Claimed\n\n"
+            f"This ticket has been claimed by {interaction.user.mention}\n\n"
+            "## Status\n"
+            "Only this middleman is now handling the trade.",
+            color=PURPLE
+        )
 
-        await interaction.channel.set_permissions(interaction.user, view_channel=True, send_messages=True)
+        await interaction.channel.send(embed=embed)
+        await interaction.response.send_message("Claimed", ephemeral=True)
 
-        await self.update(interaction.channel)
-        await interaction.response.send_message("claimed", ephemeral=True)
+    # UNCLAIM
+    @discord.ui.button(label="🔓 unclaim", style=discord.ButtonStyle.secondary)
+    async def unclaim(self, interaction: discord.Interaction, button: discord.ui.Button):
 
-    @discord.ui.button(label="unclaim", style=discord.ButtonStyle.secondary, emoji="🔄")
-    async def unclaim(self, interaction, button):
+        ticket_data[interaction.channel.id]["claimer"] = None
 
-        data = ticket_data[interaction.channel.id]
-        data["claimer_id"] = None
-        data["status"] = "🟡 Waiting for claim"
+        embed = discord.Embed(
+            title=f"💜 {SERVER_NAME} | TICKET UNCLAIMED",
+            description=
+            "# Ticket Unclaimed\n\n"
+            f"{interaction.user.mention} has released this ticket.\n\n"
+            "## Status\n"
+            "It is now available for other middlemen.",
+            color=PURPLE
+        )
 
-        await self.update(interaction.channel)
-        await interaction.response.send_message("unclaimed", ephemeral=True)
+        await interaction.channel.send(embed=embed)
+        await interaction.response.send_message("Unclaimed", ephemeral=True)
 
-    @discord.ui.button(label="add", style=discord.ButtonStyle.primary, emoji="➕")
-    async def add(self, interaction, button):
+    # ADD
+    @discord.ui.button(label="➕ add", style=discord.ButtonStyle.primary)
+    async def add(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Use command: $add @user", ephemeral=True)
 
-        await interaction.response.send_message("use $add @user", ephemeral=True)
+    # REMOVE
+    @discord.ui.button(label="➖ remove", style=discord.ButtonStyle.gray)
+    async def remove(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Use command: $remove @user", ephemeral=True)
 
-    @discord.ui.button(label="remove", style=discord.ButtonStyle.danger, emoji="➖")
-    async def remove(self, interaction, button):
+    # CLOSE
+    @discord.ui.button(label="❌ close", style=discord.ButtonStyle.danger)
+    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
 
-        await interaction.response.send_message("use $remove @user", ephemeral=True)
+        embed = discord.Embed(
+            title=f"💜 {SERVER_NAME} | TICKET CLOSED",
+            description=
+            "# Ticket Closed\n\n"
+            f"Closed by {interaction.user.mention}\n\n"
+            "This ticket has been permanently closed.",
+            color=PURPLE
+        )
 
-    @discord.ui.button(label="close", style=discord.ButtonStyle.red, emoji="❌")
-    async def close(self, interaction, button):
+        await interaction.channel.send(embed=embed)
         await interaction.channel.delete()
-
-# ======================
-# COMMANDS
-# ======================
-@bot.command()
-async def add(ctx, member: discord.Member):
-    await ctx.channel.set_permissions(member, view_channel=True, send_messages=True)
-    await ctx.send(f"➕ added {member.mention}")
-
-@bot.command()
-async def remove(ctx, member: discord.Member):
-    await ctx.channel.set_permissions(member, overwrite=None)
-    await ctx.send(f"➖ removed {member.mention}")
-
-@bot.command()
-async def claim(ctx):
-    ticket_data[ctx.channel.id]["claimer_id"] = ctx.author.id
-    await ctx.send(f"🎫 claimed by {ctx.author.mention}")
-
-@bot.command()
-async def unclaim(ctx):
-    ticket_data[ctx.channel.id]["claimer_id"] = None
-    await ctx.send("🔄 unclaimed")
-
-@bot.command()
-async def close(ctx):
-    await ctx.channel.delete()
 
 # ======================
 # PANEL
@@ -216,8 +212,11 @@ async def close(ctx):
 @bot.command()
 async def panel(ctx):
 
+    if not has_role(ctx.author, FOUNDER_ROLE_ID):
+        return await ctx.send("No permission")
+
     embed = discord.Embed(
-        title="💜 Middleman Service",
+        title="💜 Middleman Panel",
         description=(
     "Welcome to our middleman service centre.\n\n"
 
@@ -240,12 +239,20 @@ async def panel(ctx):
 
     "**Eneba • Trusted Middleman System**"
     ),
-        color=PURPLE
-    )
 
     await ctx.send(embed=embed, view=MMView())
 
 # ======================
-# RUN
+# COMMANDS
 # ======================
+@bot.command()
+async def add(ctx, member: discord.Member):
+    await ctx.channel.set_permissions(member, view_channel=True, send_messages=True)
+    await ctx.send(f"Added {member.mention}")
+
+@bot.command()
+async def remove(ctx, member: discord.Member):
+    await ctx.channel.set_permissions(member, overwrite=None)
+    await ctx.send(f"Removed {member.mention}")
+
 bot.run(os.getenv("TOKEN"))
