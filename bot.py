@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 
 # ======================
-# 🔧 CONFIG
+# 🔧 CONFIG (ROLE IDS)
 # ======================
 TICKET_CATEGORY_ID = 1492849115120537750
 MM_ROLE_ID = 1492849227414638642
@@ -19,7 +19,7 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="$", intents=intents)
 
 # ======================
-# 🔒 CHECK
+# 🔒 ROLE CHECK (FOUNDER)
 # ======================
 def is_founder():
     async def predicate(ctx):
@@ -27,7 +27,7 @@ def is_founder():
     return commands.check(predicate)
 
 # ======================
-# HELPERS
+# 🔍 HELPERS
 # ======================
 def extract_member_from_input(guild, input_value):
     if input_value.startswith("<@") and input_value.endswith(">"):
@@ -36,7 +36,7 @@ def extract_member_from_input(guild, input_value):
     return discord.utils.find(lambda m: m.name == input_value, guild.members)
 
 # ======================
-# SELECT MENU
+# 🎛️ SELECT MENU
 # ======================
 class MMSelect(discord.ui.Select):
     def __init__(self):
@@ -47,22 +47,26 @@ class MMSelect(discord.ui.Select):
         ]
 
         super().__init__(
-            placeholder="Select trade type",
+            placeholder="Select trade type below",
             min_values=1,
             max_values=1,
-            options=options
+            options=options,
+            custom_id="mm_select_trade_type"
         )
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(MMModal(self.values[0]))
 
+# ======================
+# 🎛️ VIEW
+# ======================
 class MMView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(MMSelect())
 
 # ======================
-# MODAL
+# 📩 MODAL
 # ======================
 class MMModal(discord.ui.Modal):
 
@@ -72,7 +76,7 @@ class MMModal(discord.ui.Modal):
         self.trade_type = trade_type
 
         self.other_user = discord.ui.TextInput(
-            label="Other User",
+            label="Other User (mention or name)",
             required=True
         )
 
@@ -83,7 +87,8 @@ class MMModal(discord.ui.Modal):
         )
 
         self.agreement = discord.ui.TextInput(
-            label="Agreement (YES/NO)",
+            label="Do both users agree?",
+            placeholder="Type YES if both agreed",
             required=True
         )
 
@@ -94,131 +99,98 @@ class MMModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
 
         guild = interaction.guild
-        category = guild.get_channel(TICKET_CATEGORY_ID)
-        mm_role = guild.get_role(MM_ROLE_ID)
 
+        category = guild.get_channel(TICKET_CATEGORY_ID)
+        if category is None:
+            return await interaction.response.send_message(
+                "❌ Ticket category not set.",
+                ephemeral=True
+            )
+
+        mm_role = guild.get_role(MM_ROLE_ID)
         other_member = extract_member_from_input(guild, self.other_user.value)
 
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True),
         }
 
         if other_member:
-            overwrites[other_member] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+            overwrites[other_member] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
 
         if mm_role:
-            overwrites[mm_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+            overwrites[mm_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
 
         channel = await guild.create_text_channel(
-            name=f"mm-{interaction.user.name}".lower(),
+            name=f"mm-{interaction.user.name}".lower().replace(" ", "-"),
             category=category,
             overwrites=overwrites
         )
 
         ticket_data[channel.id] = {
-            "creator": interaction.user.id,
-            "other": other_member.id if other_member else None,
-            "claimer": None,
-            "trade": self.trade_type
+            "creator_id": interaction.user.id,
+            "other_user_id": other_member.id if other_member else None,
+            "claimer_id": None,
+            "trade_type": self.trade_type,
+            "trade_details": self.trade_details.value,
+            "agreement": self.agreement.value
         }
 
+        other_text = other_member.mention if other_member else self.other_user.value
+
         embed = discord.Embed(
-            title="💜 new middleman ticket",
+            title="💜 Eneba | New Middleman Ticket",
             description=(
-                f"**trade type:** {self.trade_type}\n"
-                f"**user:** {interaction.user.mention}\n"
-                f"**other:** {other_member.mention if other_member else self.other_user.value}\n\n"
-                f"**details:**\n{self.trade_details.value}\n\n"
-                f"**status:** waiting for claim"
+                "# New Ticket Created\n\n"
+                f"**Trade Type:** {self.trade_type}\n"
+                f"**Other User:** {other_text}\n"
+                f"**Agreement:** {self.agreement.value}\n\n"
+                f"**Trade Details:** {self.trade_details.value}\n\n"
+                "**Status:** Waiting for middleman"
             ),
             color=PURPLE
         )
 
-        await channel.send(embed=embed, view=TicketButtons())
-        await interaction.response.send_message(f"ticket created: {channel.mention}", ephemeral=True)
+        embed.set_footer(text="Eneba | Ticket System")
+
+        await channel.send(
+            content=interaction.user.mention,
+            embed=embed,
+            view=TicketButtons()
+        )
+
+        await interaction.response.send_message(
+            f"✅ Ticket created: {channel.mention}",
+            ephemeral=True
+        )
 
 # ======================
-# BUTTONS
+# 🎫 BUTTONS
 # ======================
 class TicketButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    def big_embed(self, title, desc, user):
-        return discord.Embed(
-            title=title,
-            description=desc,
-            color=PURPLE
-        ).set_footer(text=f"action by {user}")
-
-    # CLAIM
     @discord.ui.button(label="🎫 claim", style=discord.ButtonStyle.success)
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ticket_data[interaction.channel.id]["claimer_id"] = interaction.user.id
+        await interaction.channel.send(f"🎫 Claimed by {interaction.user.mention}")
 
-        ticket_data[interaction.channel.id]["claimer"] = interaction.user.id
-
-        embed = self.big_embed(
-            "🎫 ticket claimed",
-            f"claimed by {interaction.user.mention}",
-            interaction.user
-        )
-
-        await interaction.channel.send(embed=embed)
-        await interaction.response.send_message("claimed", ephemeral=True)
-
-    # UNCLAIM
     @discord.ui.button(label="🔄 unclaim", style=discord.ButtonStyle.secondary)
     async def unclaim(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ticket_data[interaction.channel.id]["claimer_id"] = None
+        await interaction.channel.send("🔄 Unclaimed")
 
-        ticket_data[interaction.channel.id]["claimer"] = None
-
-        embed = self.big_embed(
-            "🔄 ticket unclaimed",
-            f"unclaimed by {interaction.user.mention}",
-            interaction.user
-        )
-
-        await interaction.channel.send(embed=embed)
-        await interaction.response.send_message("unclaimed", ephemeral=True)
-
-    # ADD
     @discord.ui.button(label="➕ add", style=discord.ButtonStyle.primary)
     async def add(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.channel.send("➕ use $add @user")
 
-        embed = self.big_embed(
-            "➕ user added",
-            f"use command `$add @user`",
-            interaction.user
-        )
-
-        await interaction.channel.send(embed=embed)
-        await interaction.response.send_message("use $add command", ephemeral=True)
-
-    # REMOVE
     @discord.ui.button(label="➖ remove", style=discord.ButtonStyle.danger)
     async def remove(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.channel.send("➖ use $remove @user")
 
-        embed = self.big_embed(
-            "➖ user removed",
-            f"use command `$remove @user`",
-            interaction.user
-        )
-
-        await interaction.channel.send(embed=embed)
-        await interaction.response.send_message("use $remove command", ephemeral=True)
-
-    # CLOSE
     @discord.ui.button(label="❌ close", style=discord.ButtonStyle.red)
     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
-
-        embed = self.big_embed(
-            "❌ ticket closed",
-            "this ticket is now closed",
-            interaction.user
-        )
-
-        await interaction.channel.send(embed=embed)
         await interaction.channel.delete()
 
 # ======================
@@ -227,60 +199,62 @@ class TicketButtons(discord.ui.View):
 @bot.command()
 async def add(ctx, member: discord.Member):
     await ctx.channel.set_permissions(member, view_channel=True, send_messages=True)
-
-    embed = discord.Embed(
-        title="➕ user added",
-        description=f"{member.mention} was added",
-        color=PURPLE
-    )
-
-    await ctx.send(embed=embed)
+    await ctx.send(f"➕ Added {member.mention}")
 
 @bot.command()
 async def remove(ctx, member: discord.Member):
     await ctx.channel.set_permissions(member, overwrite=None)
-
-    embed = discord.Embed(
-        title="➖ user removed",
-        description=f"{member.mention} was removed",
-        color=PURPLE
-    )
-
-    await ctx.send(embed=embed)
+    await ctx.send(f"➖ Removed {member.mention}")
 
 @bot.command()
 async def claim(ctx):
-    ticket_data[ctx.channel.id]["claimer"] = ctx.author.id
-    await ctx.send(f"🎫 claimed by {ctx.author.mention}")
+    ticket_data[ctx.channel.id]["claimer_id"] = ctx.author.id
+    await ctx.send(f"🎫 Claimed by {ctx.author.mention}")
 
 @bot.command()
 async def unclaim(ctx):
-    ticket_data[ctx.channel.id]["claimer"] = None
-    await ctx.send("🔄 unclaimed")
+    ticket_data[ctx.channel.id]["claimer_id"] = None
+    await ctx.send("🔄 Unclaimed")
 
 @bot.command()
 async def close(ctx):
     await ctx.channel.delete()
 
 # ======================
-# PANEL
+# PANEL (FOUNDER ROLE ONLY)
 # ======================
 @bot.command()
 @is_founder()
 async def panel(ctx):
 
     embed = discord.Embed(
-        title="💜 middleman service",
+        title="💜 Eneba | Middleman Service",
         description=(
-            "welcome to middleman service\n\n"
-            "safe trading system for all users\n\n"
-            "steps:\n"
-            "• choose trade type\n"
-            "• fill form\n"
-            "• wait staff\n"
-        ),
+    "Welcome to our middleman service centre.\n\n"
+
+    "At **Eneba**, we provide a safe and secure way to exchange your goods, "
+    "whether it's in-game items, crypto or digital assets.\n\n"
+
+    "Our trusted middleman team ensures that both parties receive exactly what they agreed upon "
+    "with **zero risk of scams**.\n\n"
+
+    "**If you've found a trade and want to ensure your safety, "
+    "you can use our FREE middleman service by following the steps below.**\n\n"
+
+    "*Note: Large trades may include a small service fee.*\n\n"
+
+    "📌 **Usage Conditions**\n"
+    "• Find someone to trade with\n"
+    "• Agree on the trade terms\n"
+    "• Click the dropdown below\n"
+    "• Wait for a staff member\n\n"
+
+    "**Eneba • Trusted Middleman System**"
+    ),
         color=PURPLE
     )
+
+    embed.set_footer(text="Eneba | Official System")
 
     await ctx.send(embed=embed, view=MMView())
 
