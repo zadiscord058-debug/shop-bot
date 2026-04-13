@@ -1,9 +1,21 @@
-FOUNDER_ROLE_ID = 123456789012345678  # put your founder role ID here
+import discord
+from discord.ext import commands
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+TOKEN = os.getenv("TOKEN")
+
+intents = discord.Intents.default()
+intents.members = True  # IMPORTANT for role.members
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+FOUNDER_ROLE_ID = 123456789012345678
 
 @bot.command()
 async def dmrole(ctx, role: discord.Role, *, text=None):
 
-    # Check if user has the founder role
     if not any(r.id == FOUNDER_ROLE_ID for r in ctx.author.roles):
         return await ctx.send("❌ You don't have permission to use this command.")
 
@@ -27,3 +39,5 @@ async def dmrole(ctx, role: discord.Role, *, text=None):
             failed += 1
 
     await ctx.send(f"✅ Done! Sent: {sent}, Failed: {failed}")
+
+bot.run(TOKEN)
