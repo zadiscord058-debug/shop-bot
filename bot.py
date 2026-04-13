@@ -2225,6 +2225,8 @@ class MercyView(discord.ui.View):
 
     @discord.ui.button(label="Accept", style=discord.ButtonStyle.green )
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)  # ✅ FIX
+
         mercy_role_id = role_id("MERCY_ROLE_ID")
         staff_channel_id = channel_id("STAFF_CHANNEL_ID")
 
@@ -2254,7 +2256,7 @@ class MercyView(discord.ui.View):
         if staff_channel:
             await staff_channel.send(embed=embed)
 
-        await interaction.response.send_message(
+        await interaction.followup.send(  # ✅ umjesto response.send_message
             "✅ **Offer accepted successfully.**",
             ephemeral=True
         )
@@ -2266,6 +2268,8 @@ class MercyView(discord.ui.View):
 
     @discord.ui.button(label="Decline", style=discord.ButtonStyle.red )
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)  # ✅ FIX
+
         embed = discord.Embed(
             title=" Mercy Declined",
             description=(
@@ -2282,7 +2286,7 @@ class MercyView(discord.ui.View):
 
         await interaction.channel.send(embed=embed)
 
-        await interaction.response.send_message(
+        await interaction.followup.send(  # ✅ umjesto response.send_message
             "❌ **Offer declined.**",
             ephemeral=True
         )
