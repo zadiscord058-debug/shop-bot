@@ -9,7 +9,7 @@ TOKEN = os.getenv("TOKEN")
 intents = discord.Intents.default()
 intents.members = True  # IMPORTANT for role.members
 
-bot = commands.Bot(command_prefix="$", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 FOUNDER_ROLE_ID = 1435194033558392842
 
