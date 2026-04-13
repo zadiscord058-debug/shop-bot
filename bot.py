@@ -3,47 +3,48 @@ from discord.ext import commands
 import os
 import asyncio
 
-# TOKEN iz environment varijable
 TOKEN = os.getenv("TOKEN")
 
-# Intenti (važni za membere)
 intents = discord.Intents.all()
+intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ID role koja smije koristiti komandu
 FOUNDER_ROLE_ID = 1435194033558392842
 
 
 @bot.event
 async def on_ready():
-    print(f"✅ Bot is logged in as {bot.user}")
+    print(f"Logged in as {bot.user}")
+
+
+@bot.command()
+async def test(ctx):
+    await ctx.send("Bot radi ✅")
 
 
 @bot.command()
 async def dmrole(ctx, role: discord.Role, *, text=None):
 
-    # Provjera permisije
+    print("COMMAND TRIGGERED")
+
     if not any(r.id == FOUNDER_ROLE_ID for r in ctx.author.roles):
-        return await ctx.send("❌ You don't have permission to use this command.")
+        return await ctx.send("❌ No permission.")
 
-    # Provjera poruke
     if not text:
-        return await ctx.send("❌ Please provide a message.")
+        return await ctx.send("❌ Provide message.")
 
-    # Fetch svih membera (fix za role.members problem)
     members = []
     async for m in ctx.guild.fetch_members(limit=None):
         if role in m.roles:
             members.append(m)
 
-    print(f"Role: {role}")
     print(f"Members found: {len(members)}")
 
     if len(members) == 0:
         return await ctx.send("❌ No members in that role.")
 
-    await ctx.send(f"📨 Sending DM to {len(members)} members...")
+    await ctx.send(f"📨 Sending to {len(members)} members...")
 
     sent = 0
     failed = 0
@@ -52,9 +53,9 @@ async def dmrole(ctx, role: discord.Role, *, text=None):
         try:
             await member.send(text)
             sent += 1
-            await asyncio.sleep(1)  # anti rate-limit
+            await asyncio.sleep(1)
         except Exception as e:
-            print(f"❌ Failed to DM {member}: {e}")
+            print(f"Failed: {member} | {e}")
             failed += 1
 
     await ctx.send(f"✅ Done! Sent: {sent}, Failed: {failed}")
