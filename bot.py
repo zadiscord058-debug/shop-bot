@@ -13,8 +13,8 @@ afk_users = {}
 
 VOUCH_FILE = "vouches.json"
 CONFIG_FILE = "config.json"
-PURPLE = discord.Color.dark_blue()
-SERVER_NAME = "igitems"
+PURPLE = discord.Color.light_blue()
+SERVER_NAME = "Foltyn's Family"
 LOG_CHANNEL_NAME = "mod-logs"
 COOLDOWN = 300
 
@@ -1745,10 +1745,10 @@ async def verify(ctx):
 @is_mm()
 async def howmmworks(ctx):
     embed = discord.Embed(
-        title=" igitems | How a Middleman Works",
+        title=" Foltyn's Family | How a Middleman Works",
         description=(
-            "🔐 **How igitems's Middleman Service Works**\n\n"
-            "Welcome to **igitems's Middleman Service**, where your trades are handled with "
+            "🔐 **How Foltyn's Family's Middleman Service Works**\n\n"
+            "Welcome to **Foltyn's Family's Middleman Service**, where your trades are handled with "
             "**maximum security, transparency, and professionalism**.\n\n"
 
             "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1773,13 +1773,13 @@ async def howmmworks(ctx):
             "7️⃣ Once both sides confirm, the MM safely releases the assets.\n\n"
 
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🌟 **igitems Middleman Service Guarantee**\n"
+            "🌟 **Foltyn's Family Middleman Service Guarantee**\n"
             "We ensure a **secure, neutral, and protected environment** for every trade."
         ),
         color=PURPLE
     )
 
-    embed.set_footer(text="igitems | Official Middleman System")
+    embed.set_footer(text="Foltyn's Family | Official Middleman System")
     await ctx.send(embed=embed)
     
 @bot.command()
@@ -1787,7 +1787,7 @@ async def howmmworks(ctx):
 async def fee(ctx):
 
     embed = discord.Embed(
-        title="igitems | Middleman Service Fee Confirmation",
+        title="Foltyn's Family | Middleman Service Fee Confirmation",
         description=(
             "To ensure transparency and fairness, all middleman transactions may include a service fee.\n\n"
 
@@ -1802,7 +1802,7 @@ async def fee(ctx):
         color=PURPLE
     )
 
-    embed.set_footer(text="igitems | Fee System")
+    embed.set_footer(text="Foltyn's Family | Fee System")
 
     await ctx.send(embed=embed, view=FeeView())
     
@@ -1813,12 +1813,12 @@ async def fee(ctx):
 async def policy(ctx):
 
     embed = discord.Embed(
-        title="igitems | Compensation Policy",
+        title="Foltyn's Family | Compensation Policy",
         description=(
             "## Middleman Compensation Policy\n\n"
 
             "If a mistake happens during a trade handled by our MM team, "
-            "igitems will review the case and provide compensation if needed.\n\n"
+            "Foltyn's Family will review the case and provide compensation if needed.\n\n"
 
             "### Covered Situations\n"
             "• Middleman mistake\n"
@@ -1835,7 +1835,7 @@ async def policy(ctx):
         color=PURPLE
     )
 
-    embed.set_footer(text="igitems | Policy System")
+    embed.set_footer(text="Foltyn's Family | Policy System")
 
     await ctx.send(embed=embed)
     
@@ -1847,11 +1847,11 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
         return await ctx.send("❌ You cannot confirm a trade with the same user.")
 
     embed = discord.Embed(
-        title="igitems | Trade Confirmation",
+        title="Foltyn's Family | Trade Confirmation",
         description=(
             "# Official Trade Confirmation\n\n"
             "This trade has been **officially confirmed** under the supervision "
-            "of the **igitems Middleman Team**.\n\n"
+            "of the **Foltyn's Family Middleman Team**.\n\n"
 
             "Both parties have agreed to the full trade terms and conditions.\n\n"
 
@@ -1878,7 +1878,7 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
         inline=False
     )
 
-    embed.set_footer(text="igitems | Secure Middleman System")
+    embed.set_footer(text="Foltyn's Family | Secure Middleman System")
 
     await ctx.send(embed=embed)
 
@@ -2013,7 +2013,7 @@ async def help(ctx):
         inline=False
     )
 
-    embed.set_footer(text="igitems | Command System")
+    embed.set_footer(text="Foltyn's Family | Command System")
 
     if ctx.guild.icon:
         embed.set_thumbnail(url=ctx.guild.icon.url)
@@ -2135,7 +2135,7 @@ class MMModal(discord.ui.Modal):
         other_user_text = other_member.mention if other_member else self.other_user.value
 
         ticket_embed = discord.Embed(
-            title="igitems | New Middleman Ticket",
+            title="Foltyn's Family | New Middleman Ticket",
             description=(
                 "# New Ticket Created\n"
                 "A new **middleman request** has been submitted.\n\n"
@@ -2151,7 +2151,7 @@ class MMModal(discord.ui.Modal):
             color=PURPLE
         )
 
-        ticket_embed.set_footer(text="igitems | Ticket System")
+        ticket_embed.set_footer(text="Foltyn's Family | Ticket System")
 
         mention_parts = [interaction.user.mention]
 
@@ -2177,11 +2177,11 @@ class MMModal(discord.ui.Modal):
 async def panel(ctx):
 
     embed = discord.Embed(
-        title=" igitems  | Middleman Service",
+        title=" Foltyn's Family  | Middleman Service",
         description=(
             "Welcome to our middleman service centre.\n\n"
 
-            "At **igitems **, we provide a safe and secure way to exchange your goods, "
+            "At **Foltyn's Family **, we provide a safe and secure way to exchange your goods, "
             "whether it's in-game items, crypto or digital assets.\n\n"
 
             "Our trusted middleman team ensures that both parties receive exactly what they agreed upon "
@@ -2198,12 +2198,12 @@ async def panel(ctx):
             "• Click the dropdown below.\n"
             "• Wait for a staff member.\n\n"
 
-            "**igitems • Trusted Middleman Service**"
+            "**Foltyn's Family • Trusted Middleman Service**"
         ),
         color=PURPLE
     )
 
-    embed.set_footer(text="igitems | Official Middleman System")
+    embed.set_footer(text="Foltyn's Family | Official Middleman System")
 
     await ctx.send(embed=embed, view=MMView())
 
