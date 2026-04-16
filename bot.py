@@ -13,7 +13,7 @@ afk_users = {}
 
 VOUCH_FILE = "vouches.json"
 CONFIG_FILE = "config.json"
-PURPLE = discord.Colour.light_blue()
+PURPLE = discord.Colour.from_rgb(88, 166, 255)
 SERVER_NAME = "Foltyn's Family"
 LOG_CHANNEL_NAME = "mod-logs"
 COOLDOWN = 300
