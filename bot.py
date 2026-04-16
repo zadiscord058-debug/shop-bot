@@ -12,7 +12,7 @@ import time
 afk_users = {}
 
 VOUCH_FILE = "vouches.json"
-CONFIG_FILE = "config.json"
+CONFIG_FILE = "config.json
 PURPLE = discord.Colour.light_blue()
 SERVER_NAME = "Foltyn's Family"
 LOG_CHANNEL_NAME = "mod-logs"
